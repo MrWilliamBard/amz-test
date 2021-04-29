@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-import static java.util.concurrent.TimeUnit.*;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 @Component
 public class IpBucketFactory {
@@ -41,14 +41,14 @@ public class IpBucketFactory {
         if (HASH_MAP.containsKey(ip)) {
             return HASH_MAP.get(ip);
         }
-        RequestBucket requestBucket = new RequestBucket(convertToMilliseconds(delay, MINUTES), maxRequestCount);
+        RequestBucket requestBucket = new RequestBucket(convertToMilliseconds(delay, delayUnit), maxRequestCount);
         HASH_MAP.put(ip, requestBucket);
         return requestBucket;
     }
 
     @Scheduled(cron = "${amz-test.clean-bucket-cron}")
     private synchronized void cleanBucketFactory() {
-        long existenceTimeMillis = convertToMilliseconds(existenceTime, HOURS);
+        long existenceTimeMillis = convertToMilliseconds(existenceTime, existenceTimeUnit);
         HASH_MAP.forEach((ip, requestBucket) -> {
             if (System.currentTimeMillis() - requestBucket.getLustUpdateMillis() > existenceTimeMillis) {
                 HASH_MAP.remove(ip);
@@ -56,7 +56,7 @@ public class IpBucketFactory {
         });
     }
 
-    private long convertToMilliseconds(int count, TimeUnit timeUnit) {
+    private static long convertToMilliseconds(int count, TimeUnit timeUnit) {
         return MILLISECONDS.convert(count, timeUnit);
     }
 
